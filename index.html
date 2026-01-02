@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Subscription Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #4f46e5;       /* Indigo 600 */
+            --primary-light: #818cf8; /* Indigo 400 */
+            --primary-dark: #3730a3;  /* Indigo 800 */
+            --bg-color: #f8fafc;      /* Slate 50 */
+            --card-bg: #ffffff;
+            --text-main: #1e293b;     /* Slate 800 */
+            --text-sec: #64748b;      /* Slate 500 */
+            --success: #10b981;       /* Emerald 500 */
+            --danger: #ef4444;        /* Red 500 */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-glow: 0 0 15px rgba(79, 70, 229, 0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            color: var(--text-main);
+            padding: 0;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- Loading Screen --- */
+        .loading-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(248, 250, 252, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 999;
+            transition: opacity 0.3s ease;
+        }
+        .spinner {
+            width: 45px; height: 45px; 
+            border: 4px solid #e2e8f0;
+            border-top-color: var(--primary); 
+            border-radius: 50%;
+            animation: spin 0.8s cubic-bezier(0.55, 0.055, 0.675, 0.19) infinite; 
+            margin-bottom: 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* --- Header Section --- */
+        .header-section {
+            background: var(--card-bg);
+            padding: 20px 24px 30px; /* Extra padding bottom for overlap */
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            box-shadow: var(--shadow-sm);
+            z-index: 10;
+            position: relative;
+        }
+
+        .nav-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px;
+        }
+        .month-title { font-size: 18px; font-weight: 600; color: var(--text-main); letter-spacing: -0.5px; }
+        .nav-btn {
+            background: #f1f5f9; border: none; width: 36px; height: 36px;
+            border-radius: 12px; cursor: pointer; color: var(--text-main);
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .nav-btn:active { transform: scale(0.9); background: #e2e8f0; }
+
+        /* Modern Credit Card Style Summary */
+        .summary-card {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 24px;
+            padding: 24px;
+            color: white;
+            box-shadow: var(--shadow-glow), var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Decorative circle inside card */
+        .summary-card::before {
+            content: ''; position: absolute; top: -50px; right: -50px;
+            width: 150px; height: 150px; background: rgba(255,255,255,0.1);
+            border-radius: 50%; pointer-events: none;
+        }
+
+        .summary-label { font-size: 13px; font-weight: 300; opacity: 0.9; margin-bottom: 4px; }
+        .summary-value { font-size: 36px; font-weight: 700; letter-spacing: -1px; line-height: 1.1; margin-bottom: 15px; }
+        
+        .progress-container {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 12px; margin-top: 10px;
+        }
+        .progress-bar-bg {
+            width: 100%; height: 6px; background: rgba(255,255,255,0.2);
+            border-radius: 10px; margin-top: 8px; overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%; background: #fff; border-radius: 10px;
+            width: 0%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- List Section --- */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px 100px; /* Padding bottom for FAB */
+            scroll-behavior: smooth;
+        }
+
+        .section-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin: 20px 0 12px;
+        }
+        .section-title { font-size: 14px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge { background: #e2e8f0; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--text-sec); }
+
+        .item-card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex; align-items: center;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            animation: slideUp 0.4s ease forwards;
+            opacity: 0;
+        }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .item-card:active { transform: scale(0.98); }
+
+        .item-card.paid {
+            opacity: 0.6;
+            background: #f1f5f9;
+            box-shadow: none;
+            border: 1px solid transparent;
+        }
+        .item-card.paid .item-name { text-decoration: line-through; color: var(--text-sec); }
+
+        .icon-box {
+            width: 48px; height: 48px; border-radius: 14px;
+            background: #eff4ff; color: var(--primary);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; margin-right: 16px;
+            flex-shrink: 0;
+        }
+        /* Specific Icon Colors */
+        .icon-Entertainment { background: #fee2e2; color: #ef4444; }
+        .icon-Loan { background: #fef3c7; color: #f59e0b; }
+        .icon-Utility { background: #d1fae5; color: #10b981; }
+
+        .info { flex: 1; }
+        .item-name { font-size: 16px; font-weight: 600; color: var(--text-main); margin-bottom: 2px; }
+        .item-price { font-size: 14px; color: var(--text-sec); font-weight: 500; }
+
+        .checkbox-custom {
+            width: 28px; height: 28px;
+            border: 2px solid #cbd5e1; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: transparent; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+        }
+        .item-card.paid .checkbox-custom {
+            background: var(--success); border-color: var(--success);
+            color: white; transform: scale(1.1);
+        }
+
+        /* --- Floating Action Button (FAB) --- */
+        .fab {
+            position: fixed; bottom: 30px; right: 24px;
+            width: 60px; height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white; border-radius: 50%; border: none;
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+            font-size: 24px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s;
+            z-index: 100;
+        }
+        .fab:active { transform: scale(0.9) rotate(90deg); }
+
+        /* --- Modal --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 200;
+            display: flex; align-items: flex-end;
+            visibility: hidden; opacity: 0; transition: 0.3s;
+            backdrop-filter: blur(4px);
+        }
+        .modal.active { visibility: visible; opacity: 1; }
+        
+        .modal-content {
+            background: white; width: 100%; 
+            border-top-left-radius: 30px; border-top-right-radius: 30px;
+            padding: 30px 24px 40px; 
+            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+        }
+        .modal.active .modal-content { transform: translateY(0); }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .modal-title { font-size: 20px; font-weight: 700; }
+        .close-btn { background: #f1f5f9; border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 16px; color: var(--text-sec); }
+
+        .input-group { margin-bottom: 16px; }
+        .input-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-sec); margin-bottom: 8px; }
+        .input-field {
+            width: 100%; padding: 14px 16px; border-radius: 14px;
+            border: 1px solid #e2e8f0; font-size: 16px; outline: none;
+            background: #f8fafc; transition: 0.2s;
+        }
+        .input-field:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        
+        .btn-submit {
+            width: 100%; padding: 16px; background: var(--primary);
+            color: white; border: none; border-radius: 16px;
+            font-size: 16px; font-weight: 600; margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            cursor: pointer;
+        }
+        .btn-submit:active { transform: scale(0.98); }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div id="loading" class="loading-overlay">
+            <div class="spinner"></div>
+            <p style="font-size: 14px; font-weight:500; color: var(--text-sec);">Syncing Data...</p>
+        </div>
+
+        <div class="header-section">
+            <div class="nav-bar">
+                <button class="nav-btn" onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+                <div class="month-title" id="monthDisplay">Loading...</div>
+                <button class="nav-btn" onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            
+            <div class="summary-card">
+                <div class="summary-label">ยอดคงเหลือที่ต้องจ่าย</div>
+                <div class="summary-value" id="totalPending">฿0</div>
+                
+                <div class="progress-container">
+                    <span id="progressText">จ่ายแล้ว 0%</span>
+                    <span id="totalPaidText">0/0</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progressBar"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="section-header">
+                <span class="section-title">รอชำระ (To Pay)</span>
+                <span class="badge" id="countPending">0</span>
+            </div>
+            <div id="listPending"></div>
+
+            <div class="section-header" style="margin-top: 30px;">
+                <span class="section-title">เรียบร้อย (Completed)</span>
+                <span class="badge" id="countPaid">0</span>
+            </div>
+            <div id="listPaid"></div>
+        </div>
+
+        <button class="fab" onclick="openModal()"><i class="fas fa-plus"></i></button>
+
+        <div class="modal" id="modal" onclick="if(event.target === this) closeModal()">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">เพิ่มรายการใหม่</div>
+                    <button class="close-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <div class="input-group">
+                    <label>ชื่อรายการ</label>
+                    <input type="text" class="input-field" id="nameInput" placeholder="เช่น Netflix, ค่าเน็ต">
+                </div>
+                <div class="input-group">
+                    <label>จำนวนเงิน (บาท)</label>
+                    <input type="number" class="input-field" id="priceInput" placeholder="0.00">
+                </div>
+                <div class="input-group">
+                    <label>หมวดหมู่</label>
+                    <select class="input-field" id="catInput">
+                        <option value="General">ทั่วไป (General)</option>
+                        <option value="Entertainment">บันเทิง (Entertainment)</option>
+                        <option value="Loan">ผ่อนชำระ (Loan)</option>
+                        <option value="Utility">บิล/สาธารณูปโภค (Utility)</option>
+                    </select>
+                </div>
+                <button class="btn-submit" onclick="addItem()">บันทึกรายการ</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwOJ0hYcIPun5ya-YofVgzEsgnDiFXvSnhjz_UwIEoVDH4EGd_S-lTjYapBj2xsSwIJ/exec';
+        // ---------------------
+
+        let items = [];
+        let currentDate = new Date();
+        const monthsTH = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+
+        async function loadData() {
+            setLoading(true);
+            try {
+                const res = await fetch(API_URL + '?action=read');
+                items = await res.json();
+                render();
+            } catch (err) {
+                alert('Connection Error: ' + err);
+            }
+            setLoading(false);
+        }
+
+        async function syncData() {
+            const fab = document.querySelector('.fab');
+            fab.style.transform = 'scale(0.8)'; // Feedback visual
+            
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(items)
+                });
+            } catch (err) { console.error(err); }
+            
+            setTimeout(() => fab.style.transform = 'scale(1)', 300);
+        }
+
+        function getMonthKey() {
+            return currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0');
+        }
+
+        function render() {
+            const monthKey = getMonthKey();
+            const listPending = document.getElementById('listPending');
+            const listPaid = document.getElementById('listPaid');
+            
+            const yearTH = currentDate.getFullYear() + 543;
+            document.getElementById('monthDisplay').innerText = `${monthsTH[currentDate.getMonth()]} ${yearTH}`;
+
+            listPending.innerHTML = '';
+            listPaid.innerHTML = '';
+
+            let sumPending = 0;
+            let sumPaid = 0;
+            let countPending = 0;
+            let countPaid = 0;
+
+            items.forEach((item, index) => {
+                const isPaid = item.paidHistory && item.paidHistory[monthKey];
+                const price = parseFloat(item.price);
+                
+                // Add staggered animation delay
+                const delay = index * 0.05; 
+
+                const cardHTML = `
+                    <div class="item-card ${isPaid ? 'paid' : ''}" style="animation-delay: ${delay}s" onclick="toggleStatus('${item.id}')">
+                        <div class="icon-box icon-${item.category}">
+                            ${getIcon(item.category)}
+                        </div>
+                        <div class="info">
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-price">฿${price.toLocaleString()}</div>
+                        </div>
+                        <div class="checkbox-custom">
+                            <i class="fas fa-check" style="font-size: 14px;"></i>
+                        </div>
+                    </div>
+                `;
+
+                if (isPaid) {
+                    listPaid.innerHTML += cardHTML;
+                    sumPaid += price;
+                    countPaid++;
+                } else {
+                    listPending.innerHTML += cardHTML;
+                    sumPending += price;
+                    countPending++;
+                }
+            });
+
+            // Summary Calculation
+            const total = sumPending + sumPaid;
+            const percent = total === 0 ? 0 : (sumPaid / total) * 100;
+
+            document.getElementById('totalPending').innerText = `฿${sumPending.toLocaleString()}`;
+            document.getElementById('countPending').innerText = countPending;
+            document.getElementById('countPaid').innerText = countPaid;
+            
+            // Update Progress Bar
+            document.getElementById('progressBar').style.width = `${percent}%`;
+            document.getElementById('progressText').innerText = `จ่ายแล้ว ${Math.round(percent)}%`;
+            document.getElementById('totalPaidText').innerText = `฿${sumPaid.toLocaleString()}`;
+        }
+
+        function toggleStatus(id) {
+            const item = items.find(i => i.id == id);
+            const monthKey = getMonthKey();
+            if(!item.paidHistory) item.paidHistory = {};
+
+            if(item.paidHistory[monthKey]) {
+                delete item.paidHistory[monthKey];
+            } else {
+                item.paidHistory[monthKey] = true;
+            }
+            render();
+            syncData();
+        }
+
+        function addItem() {
+            const name = document.getElementById('nameInput').value;
+            const price = document.getElementById('priceInput').value;
+            const cat = document.getElementById('catInput').value;
+
+            if(!name || !price) return alert("กรุณากรอกข้อมูลให้ครบ");
+
+            items.push({
+                id: Date.now().toString(),
+                name: name,
+                price: parseFloat(price),
+                category: cat,
+                paidHistory: {}
+            });
+
+            closeModal();
+            document.getElementById('nameInput').value = '';
+            document.getElementById('priceInput').value = '';
+            render();
+            syncData();
+        }
+
+        function changeMonth(step) {
+            currentDate.setMonth(currentDate.getMonth() + step);
+            render();
+        }
+
+        function getIcon(cat) {
+            if(cat === 'Entertainment') return '<i class="fas fa-film"></i>';
+            if(cat === 'Loan') return '<i class="fas fa-credit-card"></i>';
+            if(cat === 'Utility') return '<i class="fas fa-bolt"></i>';
+            return '<i class="fas fa-receipt"></i>';
+        }
+
+        function openModal() { document.getElementById('modal').classList.add('active'); }
+        function closeModal() { document.getElementById('modal').classList.remove('active'); }
+        function setLoading(show) {
+            document.getElementById('loading').style.opacity = show ? '1' : '0';
+            document.getElementById('loading').style.pointerEvents = show ? 'all' : 'none';
+        }
+
+        // Init
+        loadData();
+
+    </script>
+</body>
+</html>
