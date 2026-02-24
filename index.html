@@ -1,130 +1,96 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<title>เกมปริศนากล่องผลไม้</title>
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-        background: #f4f4f4;
-    }
-    h1 { margin-top: 20px; }
-    .container {
-        display: flex;
-        justify-content: center;
-        gap: 30px;
-        margin-top: 50px;
-    }
-    .box {
-        width: 150px;
-        height: 150px;
-        background: #ffffff;
-        border: 3px solid #333;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-        transition: 0.3s;
-    }
-    .box:hover {
-        background: #e0f7fa;
-    }
-    button {
-        margin-top: 20px;
-        padding: 8px 15px;
-        font-size: 16px;
-    }
-    #result {
-        margin-top: 20px;
-        font-size: 18px;
-        font-weight: bold;
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมปริศนากล่องผลไม้ (Fruit Box Puzzle)</title>
+    <style>
+        body { font-family: 'Tahoma', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { max-width: 800px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        .boxes { display: flex; justify-content: center; gap: 20px; margin-top: 30px; flex-wrap: wrap; }
+        .box { width: 180px; padding: 20px; border: 3px dashed #8d6e63; border-radius: 10px; cursor: pointer; transition: transform 0.2s; background: #efebe9; }
+        .box:hover { transform: translateY(-5px); background: #d7ccc8; }
+        .label { background: #ffeb3b; padding: 5px 10px; font-weight: bold; border-radius: 5px; border: 1px solid #fbc02d; margin-bottom: 15px; display: inline-block; }
+        .fruit-inside { font-size: 40px; margin-top: 10px; height: 50px; }
+        #message { margin-top: 30px; font-size: 1.2em; color: #2e7d32; font-weight: bold; height: 30px; }
+        button { margin-top: 20px; padding: 10px 20px; cursor: pointer; background: #1976d2; color: white; border: none; border-radius: 5px; }
+        button:hover { background: #1565c0; }
+        .rules { text-align: left; background: #fffde7; padding: 15px; border-radius: 8px; border-left: 5px solid #fbc02d; }
+    </style>
 </head>
 <body>
 
-<h1>🎮 เกมปริศนากล่องผลไม้</h1>
-<p>ป้ายทุกกล่องติดผิดทั้งหมด<br>ลองเปิดกล่องให้น้อยที่สุด!</p>
+<div class="container">
+    <h1>📦 ปริศนากล่องผลไม้</h1>
+    <div class="rules">
+        <p><strong>กติกา:</strong> มีกล่อง 3 ใบ บรรจุ <b>มะม่วง</b>, <b>กล้วย</b> และ <b>มะม่วง+กล้วย</b></p>
+        <p>⚠️ <b>ย้ำ!</b> ป้ายที่ติดอยู่หน้ากล่องตอนนี้ <u>ผิดทุกใบ</u></p>
+        <p>ภารกิจ: เปิดกล่องเพียง 1 ใบเพื่อหาคำตอบว่าป้ายที่ถูกต้องควรเป็นอย่างไร</p>
+    </div>
 
-<div class="container" id="game"></div>
+    <div class="boxes" id="game-board">
+        </div>
 
-<button onclick="resetGame()">เริ่มใหม่</button>
-
-<div id="result"></div>
+    <div id="message">เลือกเปิดกล่อง 1 ใบ...</div>
+    <button onclick="resetGame()">เริ่มเกมใหม่ (สุ่มใหม่)</button>
+</div>
 
 <script>
-let boxes = [];
-let openedCount = 0;
+    const types = ["มะม่วง", "กล้วย", "มะม่วงกับกล้วย"];
+    const icons = {"มะม่วง": "🥭", "กล้วย": "🍌", "มะม่วงกับกล้วย": "🥭+🍌"};
+    let boxes = [];
+    let opened = false;
 
-function shuffle(array) {
-    return array.sort(() => Math.random() - 0.5);
-}
+    function resetGame() {
+        opened = false;
+        document.getElementById('message').innerText = "เลือกเปิดกล่อง 1 ใบ...";
+        
+        // สุ่มจนกว่าจะได้ชุดที่ "ไม่มีป้ายไหนตรงกับของข้างในเลย"
+        let validLayout = false;
+        while (!validLayout) {
+            let contents = [...types].sort(() => Math.random() - 0.5);
+            validLayout = contents.every((content, index) => content !== types[index]);
+            if (validLayout) {
+                boxes = types.map((label, index) => ({
+                    label: label,
+                    content: contents[index]
+                }));
+            }
+        }
+        render();
+    }
 
-function setupGame() {
-    const labels = ["มะม่วง", "กล้วย", "มะม่วงกับกล้วย"];
-    const contents = shuffle(["มะม่วง", "กล้วย", "มะม่วงกับกล้วย"]);
+    function openBox(index) {
+        if (opened) return;
+        opened = true;
+        const box = boxes[index];
+        document.getElementById(`content-${index}`).innerText = icons[box.content];
+        document.getElementById('message').innerText = `คุณเปิดกล่องป้าย "${box.label}" เจอ "${box.content}"! คราวนี้ทายถูกหรือยัง?`;
+        
+        // เฉลยกล่องที่เหลือแบบ Logic
+        setTimeout(() => {
+            boxes.forEach((b, i) => {
+                document.getElementById(`content-${i}`).innerText = icons[b.content];
+            });
+            document.getElementById('message').innerText += " (เฉลยกล่องทั้งหมดแล้ว!)";
+        }, 2000);
+    }
 
-    boxes = [];
-
-    for (let i = 0; i < 3; i++) {
-        boxes.push({
-            label: labels[i],
-            content: contents[i],
-            opened: false
+    function render() {
+        const board = document.getElementById('game-board');
+        board.innerHTML = '';
+        boxes.forEach((box, index) => {
+            board.innerHTML += `
+                <div class="box" onclick="openBox(${index})">
+                    <div class="label">ป้าย: ${box.label}</div>
+                    <div class="fruit-inside" id="content-${index}">❓</div>
+                </div>
+            `;
         });
     }
 
-    // บังคับให้ป้ายผิดทั้งหมด
-    for (let i = 0; i < 3; i++) {
-        if (boxes[i].label === boxes[i].content) {
-            return setupGame();
-        }
-    }
-}
-
-function renderGame() {
-    const gameDiv = document.getElementById("game");
-    gameDiv.innerHTML = "";
-    openedCount = 0;
-    document.getElementById("result").innerText = "";
-
-    boxes.forEach((box, index) => {
-        const div = document.createElement("div");
-        div.className = "box";
-        div.innerHTML = `<strong>${box.label}</strong>`;
-        div.onclick = () => openBox(index, div);
-        gameDiv.appendChild(div);
-    });
-}
-
-function openBox(index, element) {
-    if (boxes[index].opened) return;
-
-    boxes[index].opened = true;
-    openedCount++;
-
-    element.innerHTML = `
-        <strong>${boxes[index].label}</strong><br>
-        👉 ${boxes[index].content}
-    `;
-
-    if (openedCount === 1) {
-        document.getElementById("result").innerText =
-            "คุณเปิดไป 1 กล่องแล้ว! คุณสามารถจัดป้ายได้ครบแล้ว 🎉";
-    } else {
-        document.getElementById("result").innerText =
-            "คุณเปิดเกิน 1 กล่องแล้ว 😅 ลองใหม่ดูสิ!";
-    }
-}
-
-function resetGame() {
-    setupGame();
-    renderGame();
-}
-
-resetGame();
+    // เริ่มเกมครั้งแรก
+    resetGame();
 </script>
 
 </body>
